@@ -2,8 +2,8 @@ package registry
 
 //服务抽象
 type Service struct {
-	Name string  `json:"name"`
-	Node []*Node `json:"node"`
+	Name  string  `json:"name"`
+	Nodes []*Node `json:"node"`
 }
 
 type Node struct {

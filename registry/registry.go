@@ -7,7 +7,7 @@ type Registry interface {
 	//插件的名字
 	Name() string
 	//初始化插件
-	Init(ctx context.Context, opt ...Options)
+	Init(ctx context.Context, opt ...Option) (err error)
 	//服务注册
 	Register(ctx context.Context, service *Service) (err error)
 	//服务反注册
