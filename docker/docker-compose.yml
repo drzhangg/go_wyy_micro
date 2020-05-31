@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  mysql_one:
+    image: "mysql"
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456" # 自己设置数据库root密码(必填)
+      # 选填
+      MYSQL_DATABASE: "test_db"
+      MYSQL_USER: "test"  # 自己建立的一个账号
+      MYSQL_PASS: "123456" # 密码
+      MYSQL_ALLOW_EMPTY_PASSWORD: no # 不允许使用空密码
+      # MYSQL_RANDOM_ROOT_PASSWORD: no # 不适用随机密码（为yes时会随机生成一个密码并输出到stdout上，通常是你看到的窗口）
+      # MYSQL_ONETIME_PASSWORD: onetime_passwd # 一次性密码（使用时，第一次登录会强制要求修改密码）
+    container_name: mysql_one
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql  # 将容器中的/var/lib/mysql挂载到当前目录下的data/mysql（MySQL的数据文件，防止容器删除后数据丢失）
+      - ./data/mysql/conf:/etc/mysql/conf.d  # 挂载好配置文件的目录（没有特殊配置的时候可以不用写这行）

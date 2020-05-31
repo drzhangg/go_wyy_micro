@@ -13,5 +13,5 @@ type Registry interface {
 	//服务反注册
 	Unregister(ctx context.Context, service *Service) (err error)
 	//服务发现：通过服务的名字获取服务的位置信息（ip和port列表）
-	GetService(ctx context.Context, name string) (service *Service, err error)
+	//GetService(ctx context.Context, name string) (service *Service, err error)
 }

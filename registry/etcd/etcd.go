@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/clientv3"
 	"go_wyy_micro/registry"
 	"path"
 	"sync"
@@ -49,7 +49,13 @@ var (
 )
 
 func init() {
-	registry.Re
+	//allServiceInfo := &AllServiceInfo{
+	//	serviceMap: make(map[string]*registry.Service, MaxServiceNum),
+	//}
+	//
+	//etcdRegistry.value.Store(allServiceInfo)
+	registry.RegisterPlugin(etcdRegistry)
+	go etcdRegistry.run()
 }
 
 /*
@@ -241,7 +247,7 @@ func (e *EtcdRegistry) syncServiceFromEtcd() {
 	e.value.Store(allserviceInfoNew)
 }
 
-func (e *EtcdRegistry) GetService(ctx context.Context, name string) (service *registry.Service, err error) {
-	//一般情况下，都会从缓存中读取
-
-}
+//func (e *EtcdRegistry) GetService(ctx context.Context, name string) (service *registry.Service, err error) {
+//	//一般情况下，都会从缓存中读取
+//
+//}
