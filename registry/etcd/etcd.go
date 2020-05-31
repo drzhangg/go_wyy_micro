@@ -41,10 +41,15 @@ type RegistryService struct {
 	keepAliveCh <-chan *clientv3.LeaseKeepAliveResponse //续租chan
 }
 
-var ()
+var (
+	etcdRegistry *EtcdRegistry = &EtcdRegistry{
+		serviceChan:        make(chan *registry.Service, MaxServiceNum),
+		registryServiceMap: make(map[string]*RegistryService, MaxServiceNum),
+	}
+)
 
 func init() {
-
+	registry.Re
 }
 
 /*
@@ -95,11 +100,13 @@ func (e *EtcdRegistry) Unregister(ctx context.Context, service *registry.Service
 	return
 }
 
+//获取当前需要注册的服务
 func (e *EtcdRegistry) run() {
 	ticker := time.NewTicker(MaxSyncServiceInterval)
 	for {
 		select {
 		case service := <-e.serviceChan:
+			//判断服务是否存在，存在说明已经注册过
 			registryService, ok := e.registryServiceMap[service.Name]
 			if ok {
 				for _, node := range service.Nodes {
@@ -108,6 +115,7 @@ func (e *EtcdRegistry) run() {
 				registryService.registered = false
 				break
 			}
+			//如果不存在，将服务放到map里
 			registryService = &RegistryService{
 				service: service,
 			}
