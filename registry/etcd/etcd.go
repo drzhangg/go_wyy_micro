@@ -108,7 +108,7 @@ func (e *EtcdRegistry) Unregister(ctx context.Context, service *registry.Service
 
 //获取当前需要注册的服务
 func (e *EtcdRegistry) run() {
-	ticker := time.NewTicker(MaxSyncServiceInterval)
+	//ticker := time.NewTicker(MaxSyncServiceInterval)
 	for {
 		select {
 		case service := <-e.serviceChan:
@@ -126,8 +126,8 @@ func (e *EtcdRegistry) run() {
 				service: service,
 			}
 			e.registryServiceMap[service.Name] = registryService
-		case <-ticker.C:
-			e.syncServiceFromEtcd()
+		//case <-ticker.C:
+		//	e.syncServiceFromEtcd()
 		default:
 			e.registerOrKeepAlive()
 			time.Sleep(time.Millisecond * 5000)

@@ -33,30 +33,8 @@ func TestRegister(t *testing.T) {
 	})
 	registryInst.Register(context.TODO(), service)
 
-	//go func() {
-	//	time.Sleep(time.Second * 10)
-	//	service.Nodes = append(service.Nodes, &registry.Node{
-	//		IP:   "127.0.0.3",
-	//		Port: 8801,
-	//	},
-	//		&registry.Node{
-	//			IP:   "127.0.0.4",
-	//			Port: 8801,
-	//		},
-	//	)
-	//	registryInst.Register(context.TODO(), service)
-	//}()
+
 	for {
-		//service, err := registryInst.GetService(context.TODO(), "comment_service")
-		//if err != nil {
-		//	t.Errorf("get service failed, err:%v", err)
-		//	return
-		//}
-		//
-		//for _, node := range service.Nodes {
-		//	fmt.Printf("service:%s, node:%#v\n", service.Name, node)
-		//}
-		//fmt.Println()
 		time.Sleep(time.Second * 1)
 	}
 }
