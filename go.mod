@@ -3,6 +3,7 @@ module go_wyy_micro
 go 1.14
 
 require (
+	github.com/bitly/go-simplejson v0.5.0
 	github.com/coreos/bbolt v1.3.4 // indirect
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect

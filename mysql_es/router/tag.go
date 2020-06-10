@@ -86,9 +86,17 @@ func OnSearchTag(c *gin.Context) {
 		return
 	}
 
+	tags, err := es.SearchTagsFromEs(reqBody.Keyword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  http.StatusInternalServerError,
+			"message": err.Error(),
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"matches": []struct{}{},
+		"matches": tags,
 	})
 }
 func OnEntityTags(c *gin.Context) {
