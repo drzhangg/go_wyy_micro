@@ -11,7 +11,7 @@ import (
 
 func TestRegister(t *testing.T) {
 	registryInst, err := registry.InitRegistry(context.TODO(), "etcd",
-		registry.WithAddrs([]string{"127.0.0.1:2379"}),
+		registry.WithAddrs([]string{"0.0.0.0:2379"}),
 		registry.WithRegistryPath("/ibinarytree/koala/"),
 		registry.WithTimeout(time.Second),
 		registry.WithHeartBeat(5))
@@ -41,7 +41,6 @@ func TestRegister(t *testing.T) {
 
 func TestEtcd(t *testing.T) {
 	config := clientv3.Config{
-		Endpoints:   []string{"127.0.0.1:2379"},
 		DialTimeout: time.Second * 10,
 	}
 	client, err := clientv3.New(config)
@@ -57,4 +56,16 @@ func TestEtcd(t *testing.T) {
 	for _, v := range getResp.Kvs {
 		fmt.Println(string(v.Value))
 	}
+}
+
+func TestEtcdPut(t *testing.T) {
+	config := clientv3.Config{
+		DialTimeout: time.Second * 10,
+	}
+	client, err := clientv3.New(config)
+	if err != nil {
+		fmt.Errorf("clientv3.New err:%v", err)
+	}
+
+	client.Put(context.TODO(),"name1","zhang")
 }
