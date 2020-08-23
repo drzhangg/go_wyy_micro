@@ -1,0 +1,8 @@
+mysql:
+  db: test
+  user: root
+
+etcd:
+  addr: 47.103.9.218
+  port: 2379
+  dialTimeout: 10
