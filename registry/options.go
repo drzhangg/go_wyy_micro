@@ -3,10 +3,10 @@ package registry
 import "time"
 
 type Options struct {
-	Addrs        []string //etcd地址
-	Timeout      time.Duration
-	RegistryPath string //注册地址
-	HeartBeat    int64  //心跳时间
+	Addrs        []string      //etcd地址
+	Timeout      time.Duration //超时时间
+	RegistryPath string        //注册地址
+	HeartBeat    int64         //心跳时间
 }
 
 // 选项模式
@@ -24,9 +24,9 @@ func WithTimeout(timeout time.Duration) Option {
 	}
 }
 
-func WithRegistryPath(registry Registry) Option {
+func WithRegistryPath(registryPath string) Option {
 	return func(opts *Options) {
-		opts.RegistryPath = registry
+		opts.RegistryPath = registryPath
 	}
 }
 
