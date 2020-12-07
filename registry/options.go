@@ -30,7 +30,7 @@ func WithRegistryPath(registryPath string) Option {
 	}
 }
 
-func WithHearBeat(hearbeat int64) Option {
+func WithHeartBeat(hearbeat int64) Option {
 	return func(opts *Options) {
 		opts.HeartBeat = hearbeat
 	}

@@ -83,6 +83,7 @@ func (e *EtcdRegistry) Init(ctx context.Context, opts ...registry.Option) (err e
 func (e *EtcdRegistry) Register(ctx context.Context, service *registry.Service) (err error) {
 	select {
 	case e.serviceCh <- service:
+		fmt.Println(121)
 	default:
 		err = fmt.Errorf("register chan is full")
 		return
@@ -95,6 +96,7 @@ func (e *EtcdRegistry) Unregister(ctx context.Context, service *registry.Service
 }
 
 func (e *EtcdRegistry) run() {
+	fmt.Println("进入run")
 	ticker := time.NewTicker(MaxSyncServiceInterval)
 	for {
 		select {
