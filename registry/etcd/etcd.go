@@ -13,63 +13,53 @@ import (
 )
 
 const (
-	MaxServiceNum          = 0
+	MaxServiceNum          = 10
 	MaxSyncServiceInterval = time.Second * 10
 )
 
-//etcd注册信息
+// etcd注册插件
 type EtcdRegistry struct {
-	options     *registry.Options
-	client      *clientv3.Client       //etcd客户端
-	serviceChan chan *registry.Service //节点信息
+	options   *registry.Options
+	client    *clientv3.Client
+	serviceCh chan *registry.Service
 
 	value              atomic.Value
 	lock               sync.Mutex
 	registryServiceMap map[string]*RegistryService
 }
 
-//map获取节点信息
 type AllServiceInfo struct {
 	serviceMap map[string]*registry.Service
 }
 
-//etcd租约信息
 type RegistryService struct {
-	id          clientv3.LeaseID                        //租约id
-	service     *registry.Service                       //
-	registered  bool                                    //是否注册
-	keepAliveCh <-chan *clientv3.LeaseKeepAliveResponse //续租chan
+	id          clientv3.LeaseID
+	service     *registry.Service
+	registered  bool
+	keepAliveCh <-chan *clientv3.LeaseKeepAliveResponse
 }
 
 var (
 	etcdRegistry *EtcdRegistry = &EtcdRegistry{
-		serviceChan:        make(chan *registry.Service, MaxServiceNum),
-		registryServiceMap: make(map[string]*RegistryService, MaxServiceNum),
+		serviceCh: nil,
+		value:     atomic.Value{},
+		lock:      sync.Mutex{},
 	}
 )
 
 func init() {
-	//allServiceInfo := &AllServiceInfo{
-	//	serviceMap: make(map[string]*registry.Service, MaxServiceNum),
-	//}
-	//
-	//etcdRegistry.value.Store(allServiceInfo)
+	//初始化map
+	allServiceInfo := &AllServiceInfo{
+		serviceMap: make(map[string]*registry.Service, MaxServiceNum),
+	}
+	//进行本地缓存
+	etcdRegistry.value.Store(allServiceInfo)
+	//注册插件
 	registry.RegisterPlugin(etcdRegistry)
+
 	go etcdRegistry.run()
 }
 
-/*
-//插件的名字
-	Name() string
-	//初始化插件
-	Init(ctx context.Context, opt ...Options)
-	//服务注册
-	Register(ctx context.Context, service *Service) (err error)
-	//服务反注册
-	Unregister(ctx context.Context, service *Service) (err error)
-	//服务发现：通过服务的名字获取服务的位置信息（ip和port列表）
-	GetService(ctx context.Context, name string) (service *Service, err error)
-*/
 func (e *EtcdRegistry) Name() string {
 	return "etcd"
 }
@@ -84,17 +74,16 @@ func (e *EtcdRegistry) Init(ctx context.Context, opts ...registry.Option) (err e
 		Endpoints:   e.options.Addrs,
 		DialTimeout: e.options.Timeout,
 	})
-
 	if err != nil {
 		err = fmt.Errorf("init etcd failed, err:%v", err)
-		return
 	}
 	return
 }
 
 func (e *EtcdRegistry) Register(ctx context.Context, service *registry.Service) (err error) {
 	select {
-	case e.serviceChan <- service:
+	case e.serviceCh <- service:
+		fmt.Println(121)
 	default:
 		err = fmt.Errorf("register chan is full")
 		return
@@ -106,36 +95,36 @@ func (e *EtcdRegistry) Unregister(ctx context.Context, service *registry.Service
 	return
 }
 
-//获取当前需要注册的服务
 func (e *EtcdRegistry) run() {
-	//ticker := time.NewTicker(MaxSyncServiceInterval)
+	fmt.Println("进入run")
+	ticker := time.NewTicker(MaxSyncServiceInterval)
 	for {
 		select {
-		case service := <-e.serviceChan:
-			//判断服务是否存在，存在说明已经注册过
+		case service := <-e.serviceCh: //从channel中取值
+			//从对应的key中获取value
 			registryService, ok := e.registryServiceMap[service.Name]
+			//如果有值
 			if ok {
+				//有值的话将值插入
 				for _, node := range service.Nodes {
 					registryService.service.Nodes = append(registryService.service.Nodes, node)
 				}
 				registryService.registered = false
 				break
 			}
-			//如果不存在，将服务放到map里
+			//没有值就重新赋值
 			registryService = &RegistryService{
 				service: service,
 			}
-			e.registryServiceMap[service.Name] = registryService
-		//case <-ticker.C:
-		//	e.syncServiceFromEtcd()
+		case <-ticker.C:
+			e.syncServiceFromEtcd()
 		default:
 			e.registerOrKeepAlive()
-			time.Sleep(time.Millisecond * 5000)
+			time.Sleep(time.Millisecond * 500)
 		}
 	}
 }
 
-//注册或者续约
 func (e *EtcdRegistry) registerOrKeepAlive() {
 	for _, registryService := range e.registryServiceMap {
 		if registryService.registered {
@@ -146,9 +135,9 @@ func (e *EtcdRegistry) registerOrKeepAlive() {
 	}
 }
 
-//保持心跳
 func (e *EtcdRegistry) keepAlive(registryService *RegistryService) {
 	select {
+	//从队列中获取数据
 	case resp := <-registryService.keepAliveCh:
 		if resp == nil {
 			registryService.registered = false
@@ -158,19 +147,17 @@ func (e *EtcdRegistry) keepAlive(registryService *RegistryService) {
 	return
 }
 
-//注册服务 在etcd中进行put
-func (e *EtcdRegistry) registerService(registryService *RegistryService) {
-	//续租时间
+func (e *EtcdRegistry) registerService(service *RegistryService) {
+	//获取租约
 	resp, err := e.client.Grant(context.TODO(), e.options.HeartBeat)
 	if err != nil {
 		return
 	}
 
-	registryService.id = resp.ID
-
-	for _, node := range registryService.service.Nodes {
+	service.id = resp.ID
+	for _, node := range service.service.Nodes {
 		tmp := &registry.Service{
-			Name:  registryService.service.Name,
+			Name:  service.service.Name,
 			Nodes: []*registry.Node{node},
 		}
 
@@ -190,41 +177,29 @@ func (e *EtcdRegistry) registerService(registryService *RegistryService) {
 		if err != nil {
 			continue
 		}
-		registryService.keepAliveCh = ch
-		registryService.registered = true
+
+		service.keepAliveCh = ch
+		service.registered = true
 	}
 }
 
-func (e *EtcdRegistry) serviceNodePath(service *registry.Service) string {
-	nodeIP := fmt.Sprintf("%s:%d", service.Nodes[0].IP, service.Nodes[0].Port)
-	return path.Join(e.options.RegistryPath, service.Name, nodeIP)
-}
-
-func (e *EtcdRegistry) servicePath(name string) string {
-	return path.Join(e.options.RegistryPath, name)
-}
-
-func (e *EtcdRegistry) getServiceFromCache(ctx context.Context, name string) (service *registry.Service, ok bool) {
-	allServiceInfo := e.value.Load().(*AllServiceInfo)
-	//一般情况下，都会从缓存中读取
-	service, ok = allServiceInfo.serviceMap[name]
-	return
-}
-
 func (e *EtcdRegistry) syncServiceFromEtcd() {
-	var allserviceInfoNew = &AllServiceInfo{serviceMap: make(map[string]*registry.Service, MaxServiceNum)}
+	var allServiceInfoNew = &AllServiceInfo{
+		serviceMap: make(map[string]*registry.Service, MaxServiceNum),
+	}
 
 	ctx := context.TODO()
 	allServiceInfo := e.value.Load().(*AllServiceInfo)
 
-	//对于缓存的每一个服务，都需要从etcd中进行更新
 	for _, service := range allServiceInfo.serviceMap {
 		key := e.servicePath(service.Name)
+		//etcd通过key获取value
 		resp, err := e.client.Get(ctx, key, clientv3.WithPrefix())
 		if err != nil {
-			allserviceInfoNew.serviceMap[service.Name] = service
+			allServiceInfoNew.serviceMap[service.Name] = service
 			continue
 		}
+
 		serviceNew := &registry.Service{
 			Name: service.Name,
 		}
@@ -242,12 +217,19 @@ func (e *EtcdRegistry) syncServiceFromEtcd() {
 				serviceNew.Nodes = append(serviceNew.Nodes, node)
 			}
 		}
-		allserviceInfoNew.serviceMap[serviceNew.Name] = serviceNew
+		allServiceInfoNew.serviceMap[serviceNew.Name] = serviceNew
 	}
-	e.value.Store(allserviceInfoNew)
+
+	//存储到本地缓存
+	e.value.Store(allServiceInfoNew)
 }
 
-//func (e *EtcdRegistry) GetService(ctx context.Context, name string) (service *registry.Service, err error) {
-//	//一般情况下，都会从缓存中读取
-//
-//}
+func (e *EtcdRegistry) serviceNodePath(service *registry.Service) string {
+
+	nodeIP := fmt.Sprintf("%s:%d", service.Nodes[0].IP, service.Nodes[0].Port)
+	return path.Join(e.options.RegistryPath, service.Name, nodeIP)
+}
+
+func (e *EtcdRegistry) servicePath(name string) string {
+	return path.Join(e.options.RegistryPath, name)
+}
