@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/spf13/viper"
-	"go_wyy_micro/common/conf"
 )
 
 var (
@@ -11,7 +10,22 @@ var (
 )
 
 func main() {
-	Viper = conf.InitConf()
-	//fmt.Println(v.Get("etcd.port"))
-	fmt.Println(Viper.Get("etcd.addr"))
+	//Viper = conf.InitConf()
+	////fmt.Println(v.Get("etcd.port"))
+	//fmt.Println(Viper.Get("etcd.addr"))
+
+	var arr []string = []string{"1","2"}
+	fmt.Println(arr)
+
+
+	var ma = make(map[string][]string)
+
+	ma["one"] = []string{"1","2"}
+
+	mm := map[string][]string{
+		"one":[]string{"12","23"},
+	}
+
+	fmt.Println(ma)
+	fmt.Println(mm)
 }
